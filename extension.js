@@ -609,6 +609,16 @@ export default class AutoAccentColourExtension extends Extension {
             }
         )
 
+        this._RGBSyncHandler = this._settings.connect(
+            'changed::sync-rgb',
+            () => {
+                if (getColorScheme() === PREFER_DARK) {
+                    journal('Setting rgb color to leds due to settings change.')
+                    setAccent()
+                }
+            }
+        )
+
         const backgroundFilePath = GLib.get_home_dir() + '/.config/background'
         const backgroundFile = Gio.File.new_for_path(backgroundFilePath)
         this._backgroundFileMonitor = backgroundFile.monitor(
@@ -645,13 +655,6 @@ export default class AutoAccentColourExtension extends Extension {
             }
         )
 
-        this._hideIndicatorHandler = this._settings.connect(
-            'changed::sync-rgb',
-            (settings, key) => {
-                journal(`${key} = ${settings.get_value(key).print(true)}`)
-            }
-        )
-
         this._highlightModeHandler = this._settings.connect(
             'changed::highlight-mode',
             (settings, key) => {
@@ -677,6 +680,10 @@ export default class AutoAccentColourExtension extends Extension {
         if (this._darkBackgroundHandler) {
             this._backgroundSettings.disconnect(this._darkBackgroundHandler)
             this._darkBackgroundHandler = null
+        }
+        if (this._RGBSyncHandler) {
+            this._settings.disconnect(this._RGBSyncHandler)
+            this._RGBSyncHandler = null
         }
         if (this._backgroundFileHandler) {
             this._backgroundFileMonitor.disconnect(this._backgroundFileHandler)

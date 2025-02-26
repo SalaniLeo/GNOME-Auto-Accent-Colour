@@ -89,11 +89,6 @@ This may sometimes be the same as the dominant colour.'
             settings.set_boolean('highlight-mode', !isActive)
         })
 
-        applyRGBRow.connect('notify::active', () => {
-            const isActive = applyRGBRow.get_active()
-            settings.set_boolean('sync-rgb', !isActive)
-        })
-
         window._settings.bind(
             'sync-rgb',
             applyRGBRow,
