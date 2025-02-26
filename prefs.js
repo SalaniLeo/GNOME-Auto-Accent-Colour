@@ -71,6 +71,36 @@ This may sometimes be the same as the dominant colour.'
         highlightColourRow.add_prefix(highlightColourRadio)
         paletteGroup.add(highlightColourRow)
 
+        const SyncToOpenRGBGroup = new Adw.PreferencesGroup({
+            title: _('OpenRGB'),
+            description: _(
+                'Automatically change the color of your rgb on background change. Requires OpenRGB to have a server running'
+            )
+        })
+        settingsPage.add(SyncToOpenRGBGroup)
+
+        const applyRGBRow = new Adw.SwitchRow({
+            title: _('Change RGB Color')
+        })
+        SyncToOpenRGBGroup.add(applyRGBRow)
+
+        dominantColourRadio.connect('toggled', () => {
+            const isActive = dominantColourRadio.get_active()
+            settings.set_boolean('highlight-mode', !isActive)
+        })
+
+        applyRGBRow.connect('notify::active', () => {
+            const isActive = applyRGBRow.get_active()
+            settings.set_boolean('sync-rgb', !isActive)
+        })
+
+        window._settings.bind(
+            'sync-rgb',
+            applyRGBRow,
+            'active',
+            Gio.SettingsBindFlags.DEFAULT
+        )
+
         window._settings.bind(
             'hide-indicator',
             indicatorRow,

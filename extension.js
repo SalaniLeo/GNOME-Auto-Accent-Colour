@@ -192,6 +192,59 @@ async function getBackgroundPalette(extensionPath, backgroundPath) {
     }
 }
 
+function rgbToHex(r, g, b, saturationFactor = 1.5) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+
+    let max = Math.max(r, g, b);
+    let min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0;
+    } else {
+        let d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        if (max === r) {
+            h = (g - b) / d + (g < b ? 6 : 0);
+        } else if (max === g) {
+            h = (b - r) / d + 2;
+        } else {
+            h = (r - g) / d + 4;
+        }
+        h /= 6;
+    }
+
+    s = Math.min(s * saturationFactor, 1);
+
+    l = Math.min(l * 1.5, 1);
+
+    let q = l < 0.5 ? l * (1 + s) : (l + s) - (l * s);
+    let p = 2 * l - q;
+
+    r = hueToRgb(p, q, h + 1/3);
+    g = hueToRgb(p, q, h);
+    b = hueToRgb(p, q, h - 1/3);
+
+    r = Math.round(r * 255);
+    g = Math.round(g * 255);
+    b = Math.round(b * 255);
+
+    return ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1).toUpperCase();
+}
+
+function hueToRgb(p, q, t) {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+}
+
+
 async function applyClosestAccent(
     thisRun,
     getCurrentRun,
@@ -202,7 +255,8 @@ async function applyClosestAccent(
     highlightMode,
     onWaitStart,
     onIncompatibleImg,
-    onFinish
+    onFinish,
+    syncRGB
 ) {
     const backgroundFile = Gio.File.new_for_uri(backgroundUri);
     const backgroundPath = backgroundFile.get_path()
@@ -257,6 +311,13 @@ async function applyClosestAccent(
     const accentType = highlightMode ? 'highlight' : 'dominant';
     const paletteIndex = highlightMode ? 1 : 0;
     const [r, g, b] = backgroundPalette[paletteIndex];
+
+    if(syncRGB) {
+        const hexColor = rgbToHex(r, g, b)
+        execCommand(
+            ['openrgb', '--client', `--color`, `${hexColor}`]
+        )
+    }
 
     journal(`Getting ${accentType} accent...`)
     const closestAccentIndex = getClosestAccentColour(accentColours, r, g, b)
@@ -512,7 +573,8 @@ export default class AutoAccentColourExtension extends Extension {
                     applyYaruTheme(),
                     journal(`New accent: ${getAccentColor()}`)
                     changeIndicatorIcon(normalIcon)
-                }
+                },
+                extensionSettings.get_boolean('sync-rgb')
             )
         }
 
@@ -578,6 +640,13 @@ export default class AutoAccentColourExtension extends Extension {
         // Watch for 'hide indicator' setting change
         this._hideIndicatorHandler = this._settings.connect(
             'changed::hide-indicator',
+            (settings, key) => {
+                journal(`${key} = ${settings.get_value(key).print(true)}`)
+            }
+        )
+
+        this._hideIndicatorHandler = this._settings.connect(
+            'changed::sync-rgb',
             (settings, key) => {
                 journal(`${key} = ${settings.get_value(key).print(true)}`)
             }

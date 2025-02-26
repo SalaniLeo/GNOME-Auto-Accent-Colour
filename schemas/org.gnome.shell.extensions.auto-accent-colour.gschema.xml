@@ -4,6 +4,9 @@
     <key name="hide-indicator" type="b">
       <default>false</default>
     </key>
+    <key name="sync-rgb" type="b">
+      <default>false</default>
+    </key>
     <key name="highlight-mode" type="b">
       <default>false</default>
     </key>
